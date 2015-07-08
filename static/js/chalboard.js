@@ -21,25 +21,30 @@ function loadchal(id) {
         return e.id == id;
     })[0]
     window.location.hash = obj.name
-    $('#chal-window .chal-name').text(obj.name)
-    $('#chal-window .chal-desc').html(marked(obj.description, {'gfm':true, 'breaks':true}))
+    scrollTo(id);
+}
 
-    for (var i = 0; i < obj.files.length; i++) {
-        filename = obj.files[i].split('/')
-        filename = filename[filename.length - 1]
-        $('#chal-window .chal-desc').append("<a href='"+obj.files[i]+"'>"+filename+"</a><br/>")
-    };
+function holdOpen(id){
+    var row = $('#row_' + id);
+       
+    //Keep question open even after submit 
+    if($(row).hasClass("Off")){
+        $(row).unbind('mouseenter mouseleave');
+        $(row).toggleClass("On Off");
+    }
+}
 
-    $('#chal-window .chal-value').text(obj.value)
-    $('#chal-window .chal-category').text(obj.category)
-    $('#chal-window #chal-id').val(obj.id)
-    $('#chal-window .chal-solves').text(obj.solves + " solves")
-    $('#answer').val("")
-
-    $('pre code').each(function(i, block) {
-        hljs.highlightBlock(block);
-    });
-    $('#chal-window').foundation('reveal', 'open');
+function scrollTo(id){
+    var row = $('#row_' + id);
+    var content = $(row).children(0).children(0);
+    
+    $('html, body').animate({
+        scrollTop: $(row).offset().top
+    }, 2000);
+    
+    //Make Content Visible if not already
+    if(!$(content).is(":visible"))
+        $(content).trigger('mouseenter');
 }
 
 function loadchalbyname(chalname) {
@@ -47,37 +52,13 @@ function loadchalbyname(chalname) {
       return e.name == chalname;
   })[0]
   window.location.hash = obj.name
-  $('#chal-window .chal-name').text(obj.name)
-  $('#chal-window .chal-desc').html(marked(obj.description, {'gfm':true, 'breaks':true}))
-
-  for (var i = 0; i < obj.files.length; i++) {
-      filename = obj.files[i].split('/')
-      filename = filename[filename.length - 1]
-      $('#chal-window .chal-desc').append("<a href='"+obj.files[i]+"'>"+filename+"</a><br/>")
-  };
-
-  $('#chal-window .chal-value').text(obj.value)
-  $('#chal-window .chal-category').text(obj.category)
-  $('#chal-window #chal-id').val(obj.id)
-  $('#chal-window .chal-solves').text(obj.solves + " solves")
-  $('#answer').val("")
-
-  $('pre code').each(function(i, block) {
-      hljs.highlightBlock(block);
-  });
-  
-  $('#chal-window').foundation('reveal', 'open');
+  scrollTo(obj.id);
 }
 
-
-$("#answer").keyup(function(event){
-    if(event.keyCode == 13){
-        $("#submit-key").click();
-    }
-});
-
-
 function submitkey(chal, key, nonce) {
+    var button = $('#row_' + chal).children(0).children(0).find('button')[0];
+    $(button).prop('disabled', true);
+    holdOpen(chal);
     $.post("/chal/" + chal, {
         key: key, 
         nonce: nonce
@@ -87,38 +68,49 @@ function submitkey(chal, key, nonce) {
           return
         }
         else if (data == 0){ // Incorrect key
-          $('#submit-key').text('Incorrect, sorry')
-          $('#submit-key').css('background-color', 'red')
-          $('#submit-key').prop('disabled', true)
+            $.blockUI({ 
+                theme: false,
+                message: 'Eeep! That is not the answer.', 
+                timeout: 3000,
+                css: { backgroundColor: 'red', color: 'white', height: '8em', width: '25em', padding: 14 } 
+            });
         }
         else if (data == 1){ // Challenge Solved
-          $('#submit-key').text('Correct!')
-          $('#submit-key').css('background-color', 'green')
-          $('#submit-key').prop('disabled', true)
-          $('#chal-window .chal-solves').text( (parseInt($('#chal-window .chal-solves').text().split(" ")[0]) + 1 +  " solves") )
+            $.blockUI({ 
+                theme: true,
+                message: 'Eureka! That is correct!', 
+                timeout: 3000,
+                css: { backgroundColor: 'green', color: 'white', height: '8em', width: '25em', padding: 14 } 
+            });
         }
         else if (data == 2){ // Challenge already solved
-          $('#submit-key').text('You already solved this')
-          $('#submit-key').prop('disabled', true)
+            $.blockUI({ 
+                theme: true,
+                message: 'You already solved this one silly!', 
+                timeout: 3000,
+                css: { backgroundColor: 'yellow', color: 'black', height: '8em', width: '25em', padding: 14 }
+            });
         }
         else if (data == 3){ // Keys per minute too high
-          $('#submit-key').text("You're submitting keys too fast. Slow down.")
-          $('#submit-key').css('background-color', '#e18728')
-          $('#submit-key').prop('disabled', true)
+            $.blockUI({ 
+                theme: true,
+                message: 'Slow down there killer! You look like a script!', 
+                timeout: 3000,
+                css: { backgroundColor: 'red', color: 'white', height: '8em', width: '25em', padding: 14 }
+            });
         }
         else if (data == 4){ // too many incorrect solves
-          $('#submit-key').text('Too many attempts.')
-          $('#submit-key').css('background-color', 'red')
-          $('#submit-key').prop('disabled', true)
+            $.blockUI({ 
+                theme: true,
+                message: 'No cookie for you! You exceeded the max solve attempts.', 
+                timeout: 3000,
+                css: { backgroundColor: 'red', color: 'black', height: '8em', width: '25em', padding: 14 }
+            });
         }
         marktoomanyattempts()
         marksolves()
         updatesolves()
-        setTimeout(function(){
-          $('#submit-key').text('Submit')
-          $('#submit-key').prop('disabled', false)
-          $('#submit-key').css('background-color', '#007095')
-        }, 3000);
+        $(button).prop('disabled', false);
     })
 }
 
@@ -126,13 +118,11 @@ function marksolves() {
     $.get('/solves', function (data) {
         solves = $.parseJSON(JSON.stringify(data));
         for (var i = solves['solves'].length - 1; i >= 0; i--) {
-            id = solves['solves'][i].chalid
-            $('#challenges button[value="' + id + '"]').addClass('secondary')
-            $('#challenges button[value="' + id + '"]').css('opacity', '0.3')
+            id = solves['solves'][i].chalid;
+            if(!$('#row_' + id).hasClass('solved'))
+                $('#row_' + id).addClass('solved');
+            $('#row_' + id).children().prop('title', 'Solved!');
         };
-        if (window.location.hash.length > 0){
-          loadchalbyname(window.location.hash.substring(1))
-        }
     });
 }
 
@@ -141,12 +131,11 @@ function marktoomanyattempts() {
         maxattempts = $.parseJSON(JSON.stringify(data));
         for (var i = maxattempts['maxattempts'].length - 1; i >= 0; i--) {
             id = maxattempts['maxattempts'][i].chalid
-            $('#challenges button[value="' + id + '"]').addClass('secondary')
-            $('#challenges button[value="' + id + '"]').css('background-color', '#FF9999')
+            if(!$('#row_' + id).hasClass('exceeded'))
+                $('#row_' + id).addClass('exceeded');
+            $('#row_' + id).children().prop('title', 'Max submissions exceeded!');
+            
         };
-        if (window.location.hash.length > 0){
-          loadchalbyname(window.location.hash.substring(1))
-        }
     });
 }
 
@@ -160,8 +149,8 @@ function updatesolves(){
             return e.name == chals[i];
         })[0]
         obj.solves = solves[chals[i]]
-      };
-
+        $('#row_' + obj.id).children()[5].innerHTML = obj.solves;
+      }; 
     });
 }
 
@@ -185,7 +174,7 @@ function loadchals() {
         categories = [];
         challenges = $.parseJSON(JSON.stringify(data));
         
-        $('#challenges').append('<TR><th/><th>Id</th><th>Name</th><th>Category</th><th>Points</th></TR>');
+        $('#challenges').append('<thead><tr><th class="nosort"/><th>Id</th><th>Name</th><th>Category</th><th>Points</th><th>Solves</th></tr></thead><tbody>');
 
         for (var i = challenges['game'].length - 1; i >= 0; i--) {
             challenges['game'][i].solves = 0;
@@ -201,12 +190,13 @@ function loadchals() {
                 files += '<br/><a href="' + challenge.files[x] + '">' + challenge.files[x].replace(/^.*[\\\/]/, '') + "</a>";
             }
             
-            $('#challenges').append('<TR><td><div style="display:none;"><p>' + description + files +
-                                    '<br/><input type="text" placeholder="Flag Value" /><input type="Submit" name="Submit"/></p>' +
+            $('#challenges').append('<TR id="row_' + id + '"><td style="width:1px;"><div style="display:none;"><p>' + description + files +
+                                    '<br/><input type="text" placeholder="Flag Value" /><button>Submit</button></p>' +
                                     '</div></td><td>' + id + '</td><td>' + name + '</td>' +
-                                    '<td>' + category + '</td><td>' + value + '</td></tr>' +"\n");
+                                    '<td>' + category + '</td><td>' + value + '</td><td>0</td></tr>' +"\n");
         };
-
+        $('#challenges').append('</tbody>');
+        $('#challenges').addClass('tablesorter');
         updatesolves()
         marktoomanyattempts()
         marksolves()
@@ -239,16 +229,18 @@ function loadchals() {
         $('#challenges tr td').parent().addClass("On");
         $('#challenges tr td').css('vertical-align', 'top');
         $('#challenges tr td div').css('position', 'absolute');
+        
+        $('button').click(function(){ 
+                            var id = parseInt($(this).parent().closest('tr').children('td')[1].innerHTML);
+                            var desc = $(this).parent().closest('tr').children('td')[0];
+                            var key = $(desc).find('input')[0].value;
+                            var nonce = $('#nonce').val();
+                            submitkey(id,key,nonce);
+                        }
+                );
+        $("#challenges").tablesorter({ sortList: [[1,0],[2,0]] });
     });
 }
-
-$('#submit-key').click(function (e) {
-    submitkey($('#chal-id').val(), $('#answer').val(), $('#nonce').val())
-});
-
-$('.chal-solves').click(function (e) {
-    getsolves($('#chal-id').val())
-});
 
 // $.distint(array)
 // Unique elements in array
@@ -275,31 +267,15 @@ $(document).on('close', '[data-reveal]', function () {
   window.location.hash = ""
 });
 
-// function solves_graph() {
-//     $.get('/graphs/solves', function(data){
-//         solves = $.parseJSON(JSON.stringify(data));
-//         chals = []
-//         counts = []
-//         colors = []
-//         i = 1
-//         $.each(solves, function(key, value){
-//             chals.push(key)
-//             counts.push(value)
-//             colors.push(colorhash(i++))
-//         });
-
-//     });
-// }
-
 function update(){
-    $('#challenges').empty();
-    loadchals();
     solves_graph();
+    marktoomanyattempts();
+    marksolves();
+    updatesolves();
 }
 
 $(function() {
     loadchals();
-    // solves_graph()
 });
 
 setInterval(update, 300000);
