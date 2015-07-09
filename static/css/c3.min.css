@@ -4,3 +4,4 @@
 .empty { color: #524630;}
 .solved, .solved td {background-color: green; font-weight: bolder; opacity:.8;}
 .exceeded {background-color: red;}
+.filter {width:25em;padding:1px 1px 1px 4px;height:2em;margin-left:1em;}

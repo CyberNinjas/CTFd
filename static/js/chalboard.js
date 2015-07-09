@@ -77,7 +77,7 @@ function submitkey(chal, key, nonce) {
         }
         else if (data == 1){ // Challenge Solved
             $.blockUI({ 
-                theme: true,
+                theme: false,
                 message: 'Eureka! That is correct!', 
                 timeout: 3000,
                 css: { backgroundColor: 'green', color: 'white', height: '8em', width: '25em', padding: 14 } 
@@ -85,7 +85,7 @@ function submitkey(chal, key, nonce) {
         }
         else if (data == 2){ // Challenge already solved
             $.blockUI({ 
-                theme: true,
+                theme: false,
                 message: 'You already solved this one silly!', 
                 timeout: 3000,
                 css: { backgroundColor: 'yellow', color: 'black', height: '8em', width: '25em', padding: 14 }
@@ -93,7 +93,7 @@ function submitkey(chal, key, nonce) {
         }
         else if (data == 3){ // Keys per minute too high
             $.blockUI({ 
-                theme: true,
+                theme: false,
                 message: 'Slow down there killer! You look like a script!', 
                 timeout: 3000,
                 css: { backgroundColor: 'red', color: 'white', height: '8em', width: '25em', padding: 14 }
@@ -123,6 +123,7 @@ function marksolves() {
                 $('#row_' + id).addClass('solved');
             $('#row_' + id).children().prop('title', 'Solved!');
         };
+        hideSolved();
     });
 }
 
@@ -175,7 +176,7 @@ function loadchals() {
         challenges = $.parseJSON(JSON.stringify(data));
         
         $('#challenges').append('<thead><tr><th class="nosort"/><th>Id</th><th>Name</th><th>Category</th><th>Points</th><th>Solves</th></tr></thead><tbody>');
-
+        var categories;
         for (var i = challenges['game'].length - 1; i >= 0; i--) {
             challenges['game'][i].solves = 0;
             
@@ -186,6 +187,8 @@ function loadchals() {
             var category = challenge.category;
             var value = challenge.value;
             var files = "";
+            categories[category]=1;
+            
             for(var x=0; x < challenge.files.length; x++){
                 files += '<br/><a href="' + challenge.files[x] + '">' + challenge.files[x].replace(/^.*[\\\/]/, '') + "</a>";
             }
@@ -195,6 +198,16 @@ function loadchals() {
                                     '</div></td><td>' + id + '</td><td>' + name + '</td>' +
                                     '<td>' + category + '</td><td>' + value + '</td><td>0</td></tr>' +"\n");
         };
+
+        $.each(Object.keys(categories).sort(), function(key, value) {  
+                                    $('#cat-filter')
+                                        .append($("<option></option>")
+                                        .attr("value",value)
+                                        .text(value)); 
+                               });
+        $('#hide-solved').change(function(){hideSolved();});        
+        $('#cat-filter').change(function(){filterCategories(); });
+                                  
         $('#challenges').append('</tbody>');
         $('#challenges').addClass('tablesorter');
         updatesolves()
@@ -241,6 +254,48 @@ function loadchals() {
         $("#challenges").tablesorter({ sortList: [[1,0],[2,0]] });
     });
 }
+
+function hideSolved(){ 
+  if($('#hide-solved').is(":checked"))
+    $('.exceeded, .solved').css('display', 'none');
+  else
+    $('.exceeded, .solved').css('display', '');
+}
+
+function filterCategories(){    
+    var name = $('#cat-filter').val();
+    if(name=='All'){
+      $('#challenges tr td').parent().each(
+          function(){
+            $(this).css('display', '');
+            if($(this).hasClass('Off')){
+              $(this).click();
+              $(this).trigger("mouseout");
+            }
+          });
+      hideSolved();
+      return;
+    }
+
+    $('#challenges tr td').parent().each(function(){
+      if ($(this).find('td:eq(3)').text()!=name){
+        $(this).css('display', 'none');
+        if($(this).hasClass('Off')){
+          $(this).click();
+          $(this).trigger("mouseout");
+        }
+      } else {
+        //If it has either solved or exceeded class set, and hiding solved, skip the resetting of display
+        if(($(this).hasClass('solved') || $(this).hasClass('exceeded')) && $('#hide-solved').is(":checked"))
+            return;
+        $(this).css('display', '');  
+        $(this).trigger("mouseenter");
+        $(this).click();
+      }
+    });
+}
+
+
 
 // $.distint(array)
 // Unique elements in array
