@@ -194,7 +194,7 @@ function loadchals() {
             }
             
             $('#challenges').append('<TR id="row_' + id + '"><td style="width:1px;"><div style="display:none;"><p>' + description + files +
-                                    '<br/><input type="text" placeholder="Flag Value" /><button>Submit</button></p>' +
+                                    '<br/><input style="width:40em;" type="text" placeholder="Flag Value" /><button>Submit</button></p>' +
                                     '</div></td><td>' + id + '</td><td>' + name + '</td>' +
                                     '<td>' + category + '</td><td>' + value + '</td><td>0</td></tr>' +"\n");
         };
@@ -220,7 +220,8 @@ function loadchals() {
           $(content).toggle();
           if($(content).is(":visible")){ 
             var margLeft = Math.max(20, ($(this).width() - $(content).width())/2);
-            $(content).css('margin-left', margLeft).css('margin-right', margLeft).css('margin-top', $(this).height());
+            //$(content).css('margin-left', margLeft).css('margin-right', margLeft).css('margin-top', $(this).height());
+            $(content).css('margin-left', 24).css('margin-top', $(this).height());
             $(this).outerHeight($(this).height() + $(content).height());
           } else {
             $(this).height('auto');
