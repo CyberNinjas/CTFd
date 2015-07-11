@@ -1,0 +1,18 @@
+#! /bin/bash
+echo 'For this script to work properly requires: 
+echo '* The script is running from the home directory of the user'
+echo '* There is a symbolic link to the ctfd dir called ctfd'
+echo '* There is a dir .db_archive in the user's home directory for backups'
+echo
+echo
+echo '--------------Script Start------------'
+echo 'Backing up current ctfd directory'
+tar  -zcvf ~/.db_archive/ctfdBackup_`date +%Y%m%d_%H%M%S`.tar.gz ctfd > nul
+echo '	* Directory backed up to .db_archive '
+echo 'Resetting Passwords'
+sudo python ctfd/resetPasswords.py > passwords.txt
+echo '	* Passwords saved to passwords.txt'
+echo
+echo 'Resetting Challenges'
+sudo python ctfd/resetDb.py
+echo '--------------Script Complete------------'
